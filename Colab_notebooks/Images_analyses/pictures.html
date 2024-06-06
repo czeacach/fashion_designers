@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 600px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "degree": 1, "id": "Bonniers veckotidning", "label": "Bonniers veckotidning", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 7, "id": "Siri Derkert", "label": "Siri Derkert", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 8, "id": "Parsons School of Design", "label": "Parsons School of Design", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Adrian", "label": "Adrian", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Claire McCardell", "label": "Claire McCardell", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Ethel Myers", "label": "Ethel Myers", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Irene Sharaff", "label": "Irene Sharaff", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Jo Copeland", "label": "Jo Copeland", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Lila Bath", "label": "Lila Bath", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Robert Kalloch", "label": "Robert Kalloch", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Van Day Truex", "label": "Van Day Truex", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Q16651706", "label": "Q16651706", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Lyubov\u0027 Popova", "label": "Lyubov\u0027 Popova", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Whitlockska samskolan", "label": "Whitlockska samskolan", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Society of Russian sculptors", "label": "Society of Russian sculptors", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 7, "id": "Vera Mukhina", "label": "Vera Mukhina", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Emily Wilkens", "label": "Emily Wilkens", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 3, "id": "Pratt Institute", "label": "Pratt Institute", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Hood College", "label": "Hood College", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Hollywood High School", "label": "Hollywood High School", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Bonnie Cashin", "label": "Bonnie Cashin", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Dwight School", "label": "Dwight School", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Acad\u00e9mie de la Grande Chaumi\u00e8re", "label": "Acad\u00e9mie de la Grande Chaumi\u00e8re", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Acad\u00e9mie de La Palette", "label": "Acad\u00e9mie de La Palette", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Vkhutemas", "label": "Vkhutemas", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Stroganov Russian State University of Design and Applied Arts", "label": "Stroganov Russian State University of Design and Applied Arts", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Acad\u00e9mie Colarossi", "label": "Acad\u00e9mie Colarossi", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Imperial Porcelain Factory", "label": "Imperial Porcelain Factory", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Berlin University of the Arts", "label": "Berlin University of the Arts", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Otto Haas-Heye", "label": "Otto Haas-Heye", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 3, "id": "Thea Tewi", "label": "Thea Tewi", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 6, "id": "Art Students League of New York", "label": "Art Students League of New York", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Clare Potter", "label": "Clare Potter", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Sylvia Pedlar", "label": "Sylvia Pedlar", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Birgitta school", "label": "Birgitta school", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Royal Swedish Academy of Fine Arts", "label": "Royal Swedish Academy of Fine Arts", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Althin\u0027s School of Painting", "label": "Althin\u0027s School of Painting", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Cooper Union", "label": "Cooper Union", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Georges Lepape", "label": "Georges Lepape", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Norman Norell", "label": "Norman Norell", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "New School", "label": "New School", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Christodora House", "label": "Christodora House", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "20th Century Studios", "label": "20th Century Studios", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Supremus", "label": "Supremus", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Higher Federal Graphical Institute of Education and Research", "label": "Higher Federal Graphical Institute of Education and Research", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 4, "id": "Heddi Hirsch", "label": "Heddi Hirsch", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 3, "id": "Gertrud Kornhas-Brandt", "label": "Gertrud Kornhas-Brandt", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 6, "id": "Wiener Werkst\u00e4tte", "label": "Wiener Werkst\u00e4tte", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Q19278112", "label": "Q19278112", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Arts and Crafts School, Weimar", "label": "Arts and Crafts School, Weimar", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Eva Frieberger", "label": "Eva Frieberger", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Frieda Lagus", "label": "Frieda Lagus", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Fritzi Berger", "label": "Fritzi Berger", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 4, "id": "Jutta Sika", "label": "Jutta Sika", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 6, "id": "University of Applied Arts Vienna", "label": "University of Applied Arts Vienna", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Q2568892", "label": "Q2568892", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Eduard Josef Wimmer-Wisgrill", "label": "Eduard Josef Wimmer-Wisgrill", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Gertrud H\u00f6chsmann", "label": "Gertrud H\u00f6chsmann", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "\u00d6sterreichischer Werkbund", "label": "\u00d6sterreichischer Werkbund", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Austrian Association of Women Artists", "label": "Austrian Association of Women Artists", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Ballyhoo", "label": "Ballyhoo", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 14, "id": "Russell Patterson", "label": "Russell Patterson", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Photoplay", "label": "Photoplay", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Cosmopolitan", "label": "Cosmopolitan", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "New York Journal-American", "label": "New York Journal-American", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Woman\u0027s Home Companion", "label": "Woman\u0027s Home Companion", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "College Humor", "label": "College Humor", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "La Patrie", "label": "La Patrie", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Montreal Standard", "label": "Montreal Standard", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "The American Magazine", "label": "The American Magazine", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Redbook", "label": "Redbook", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "McGill University", "label": "McGill University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Collier\u0027s", "label": "Collier\u0027s", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Montreal Star", "label": "Montreal Star", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "National Cartoonists Society", "label": "National Cartoonists Society", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "M\u00fcnchner K\u00fcnstlerinnenverein", "label": "M\u00fcnchner K\u00fcnstlerinnenverein", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 8, "id": "Marie von Geldern-Egmond", "label": "Marie von Geldern-Egmond", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Kaufhaus Renner, Dresden", "label": "Kaufhaus Renner, Dresden", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Kaufhaus Gerson", "label": "Kaufhaus Gerson", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Paul W\u00fcrzler-Klopsch", "label": "Paul W\u00fcrzler-Klopsch", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Paul Schultze-Naumburg", "label": "Paul Schultze-Naumburg", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "GEDOK", "label": "GEDOK", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Deutscher Werkbund", "label": "Deutscher Werkbund", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Deutsche Werkst\u00e4tten Hellerau", "label": "Deutsche Werkst\u00e4tten Hellerau", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Anna Muthesius", "label": "Anna Muthesius", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Marie-Louise Carven", "label": "Marie-Louise Carven", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 5, "id": "Beaux-Arts de Paris", "label": "Beaux-Arts de Paris", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Jean-Gabriel Domergue", "label": "Jean-Gabriel Domergue", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Acad\u00e9mie des beaux-arts", "label": "Acad\u00e9mie des beaux-arts", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Helena Rubinstein", "label": "Helena Rubinstein", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Eric de Kolb", "label": "Eric de Kolb", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Shanghai Fine Arts School", "label": "Shanghai Fine Arts School", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Jiang Xiaojian", "label": "Jiang Xiaojian", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "George Barbier", "label": "George Barbier", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Acad\u00e9mie Julian", "label": "Acad\u00e9mie Julian", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Stanford University", "label": "Stanford University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 4, "id": "Edith Head", "label": "Edith Head", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Otis College of Art and Design", "label": "Otis College of Art and Design", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "University of California, Berkeley", "label": "University of California, Berkeley", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Chouinard Art Institute", "label": "Chouinard Art Institute", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "William Travilla", "label": "William Travilla", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Woodbury University", "label": "Woodbury University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 4, "id": "Hugo Boss", "label": "Hugo Boss", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Reichsluftschutzbund", "label": "Reichsluftschutzbund", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Kyffh\u00e4userbund", "label": "Kyffh\u00e4userbund", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Nationalsozialistischer Reichsbund f\u00fcr Leibes\u00fcbungen", "label": "Nationalsozialistischer Reichsbund f\u00fcr Leibes\u00fcbungen", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Nationalsozialistische Volkswohlfahrt", "label": "Nationalsozialistische Volkswohlfahrt", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Vera N\u00e1dor", "label": "Vera N\u00e1dor", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Moholy-Nagy University of Art and Design", "label": "Moholy-Nagy University of Art and Design", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "This is fashion", "label": "This is fashion", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Kl\u00e1ra Zsindelyn\u00e9 T\u00fcd\u0151s", "label": "Kl\u00e1ra Zsindelyn\u00e9 T\u00fcd\u0151s", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Debreceni Reform\u00e1tus Koll\u00e9gium D\u00f3czy Gimn\u00e1ziuma", "label": "Debreceni Reform\u00e1tus Koll\u00e9gium D\u00f3czy Gimn\u00e1ziuma", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 4, "id": "Osceola Macarthy Adams", "label": "Osceola Macarthy Adams", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Fisk University", "label": "Fisk University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Howard University", "label": "Howard University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Delta Sigma Theta", "label": "Delta Sigma Theta", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Bennett College", "label": "Bennett College", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Stockholms-Tidningen", "label": "Stockholms-Tidningen", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Aili Pekonen", "label": "Aili Pekonen", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Konstfack", "label": "Konstfack", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Katja of Sweden", "label": "Katja of Sweden", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Helsinki University of Technology", "label": "Helsinki University of Technology", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Aili-Salli Ahde-Kj\u00e4ldman", "label": "Aili-Salli Ahde-Kj\u00e4ldman", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Architecta", "label": "Architecta", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Tuumastukki", "label": "Tuumastukki", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Carolyn Schnurer", "label": "Carolyn Schnurer", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Traphagen School of Fashion", "label": "Traphagen School of Fashion", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "New York University", "label": "New York University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Gladys Parker", "label": "Gladys Parker", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Fashion Institute of Technology", "label": "Fashion Institute of Technology", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "David Rappaport", "label": "David Rappaport", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "Helen Brockman", "label": "Helen Brockman", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Kansas State University", "label": "Kansas State University", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "State Academy of Fine Arts Stuttgart", "label": "State Academy of Fine Arts Stuttgart", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 3, "id": "Else Raydt", "label": "Else Raydt", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "Verein der Berliner K\u00fcnstlerinnen", "label": "Verein der Berliner K\u00fcnstlerinnen", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "Kunstgewerbe- und Handwerkerschule Magdeburg", "label": "Kunstgewerbe- und Handwerkerschule Magdeburg", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 1, "id": "John P. John", "label": "John P. John", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 2, "id": "University of Paris", "label": "University of Paris", "shape": "dot", "size": 10, "type": "O"}, {"color": "#97c2fc", "degree": 2, "id": "Irene Galitzine", "label": "Irene Galitzine", "shape": "dot", "size": 10, "type": "P"}, {"color": "#97c2fc", "degree": 1, "id": "University of Cambridge", "label": "University of Cambridge", "shape": "dot", "size": 10, "type": "O"}]);
+                  edges = new vis.DataSet([{"birth_year": 1888, "from": "Bonniers veckotidning", "periode": "1801_1921", "relationship": "employer", "to": "Siri Derkert", "width": 1}, {"birth_year": 1903, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Adrian", "width": 1}, {"birth_year": 1905, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Claire McCardell", "width": 1}, {"birth_year": 1881, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Ethel Myers", "width": 1}, {"birth_year": 1910, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Irene Sharaff", "width": 1}, {"birth_year": 1899, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Jo Copeland", "width": 1}, {"birth_year": 1910, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Lila Bath", "width": 1}, {"birth_year": 1893, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Robert Kalloch", "width": 1}, {"birth_year": 1904, "from": "Parsons School of Design", "periode": "1801_1921", "relationship": "employer", "to": "Van Day Truex", "width": 1}, {"birth_year": 1889, "from": "Q16651706", "periode": "1801_1921", "relationship": "educated_at", "to": "Lyubov\u0027 Popova", "width": 1}, {"birth_year": 1888, "from": "Whitlockska samskolan", "periode": "1801_1921", "relationship": "educated_at", "to": "Siri Derkert", "width": 1}, {"birth_year": 1889, "from": "Society of Russian sculptors", "periode": "1801_1921", "relationship": "member_of", "to": "Vera Mukhina", "width": 1}, {"birth_year": 1917, "from": "Emily Wilkens", "periode": "1801_1921", "relationship": "educated_at", "to": "Pratt Institute", "width": 1}, {"birth_year": 1905, "from": "Claire McCardell", "periode": "1801_1921", "relationship": "educated_at", "to": "Hood College", "width": 1}, {"birth_year": 1915, "from": "Hollywood High School", "periode": "1801_1921", "relationship": "educated_at", "to": "Bonnie Cashin", "width": 1}, {"birth_year": 1893, "from": "Robert Kalloch", "periode": "1801_1921", "relationship": "educated_at", "to": "Dwight School", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "educated_at", "to": "Acad\u00e9mie de la Grande Chaumi\u00e8re", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "educated_at", "to": "Acad\u00e9mie de La Palette", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "employer", "to": "Vkhutemas", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "employer", "to": "Stroganov Russian State University of Design and Applied Arts", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "educated_at", "to": "Acad\u00e9mie Colarossi", "width": 1}, {"birth_year": 1889, "from": "Vera Mukhina", "periode": "1801_1921", "relationship": "employer", "to": "Imperial Porcelain Factory", "width": 1}, {"birth_year": 1888, "from": "Acad\u00e9mie Colarossi", "periode": "1801_1921", "relationship": "educated_at", "to": "Siri Derkert", "width": 1}, {"birth_year": 1910, "from": "Acad\u00e9mie de la Grande Chaumi\u00e8re", "periode": "1801_1921", "relationship": "educated_at", "to": "Irene Sharaff", "width": 1}, {"birth_year": 1888, "from": "Acad\u00e9mie de la Grande Chaumi\u00e8re", "periode": "1801_1921", "relationship": "educated_at", "to": "Siri Derkert", "width": 1}, {"birth_year": 1879, "from": "Berlin University of the Arts", "periode": "1801_1921", "relationship": "employer", "to": "Otto Haas-Heye", "width": 1}, {"birth_year": 1902, "from": "Berlin University of the Arts", "periode": "1801_1921", "relationship": "educated_at", "to": "Thea Tewi", "width": 1}, {"birth_year": 1915, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Bonnie Cashin", "width": 1}, {"birth_year": 1903, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Clare Potter", "width": 1}, {"birth_year": 1899, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Jo Copeland", "width": 1}, {"birth_year": 1910, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Lila Bath", "width": 1}, {"birth_year": 1901, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Sylvia Pedlar", "width": 1}, {"birth_year": 1915, "from": "Art Students League of New York", "periode": "1801_1921", "relationship": "educated_at", "to": "Thea Tewi", "width": 1}, {"birth_year": 1888, "from": "Siri Derkert", "periode": "1801_1921", "relationship": "employer", "to": "Birgitta school", "width": 1}, {"birth_year": 1888, "from": "Siri Derkert", "periode": "1801_1921", "relationship": "educated_at", "to": "Royal Swedish Academy of Fine Arts", "width": 1}, {"birth_year": 1888, "from": "Siri Derkert", "periode": "1801_1921", "relationship": "educated_at", "to": "Althin\u0027s School of Painting", "width": 1}, {"birth_year": 1903, "from": "Clare Potter", "periode": "1801_1921", "relationship": "educated_at", "to": "Pratt Institute", "width": 1}, {"birth_year": 1901, "from": "Sylvia Pedlar", "periode": "1801_1921", "relationship": "educated_at", "to": "Cooper Union", "width": 1}, {"birth_year": 1887, "from": "Acad\u00e9mie de La Palette", "periode": "1801_1921", "relationship": "educated_at", "to": "Georges Lepape", "width": 1}, {"birth_year": 1889, "from": "Acad\u00e9mie de La Palette", "periode": "1801_1921", "relationship": "educated_at", "to": "Lyubov\u0027 Popova", "width": 1}, {"birth_year": 1900, "from": "Pratt Institute", "periode": "1801_1921", "relationship": "educated_at", "to": "Norman Norell", "width": 1}, {"birth_year": 1902, "from": "New School", "periode": "1801_1921", "relationship": "educated_at", "to": "Thea Tewi", "width": 1}, {"birth_year": 1881, "from": "Ethel Myers", "periode": "1801_1921", "relationship": "employer", "to": "Christodora House", "width": 1}, {"birth_year": 1915, "from": "20th Century Studios", "periode": "1801_1921", "relationship": "employer", "to": "Bonnie Cashin", "width": 1}, {"birth_year": 1889, "from": "Lyubov\u0027 Popova", "periode": "1801_1921", "relationship": "member_of", "to": "Supremus", "width": 1}, {"birth_year": 1895, "from": "Higher Federal Graphical Institute of Education and Research", "periode": "1801_1921", "relationship": "educated_at", "to": "Heddi Hirsch", "width": 1}, {"birth_year": 1892, "from": "Gertrud Kornhas-Brandt", "periode": "1801_1921", "relationship": "employer", "to": "Wiener Werkst\u00e4tte", "width": 1}, {"birth_year": 1892, "from": "Gertrud Kornhas-Brandt", "periode": "1801_1921", "relationship": "employer", "to": "Q19278112", "width": 1}, {"birth_year": 1892, "from": "Gertrud Kornhas-Brandt", "periode": "1801_1921", "relationship": "educated_at", "to": "Arts and Crafts School, Weimar", "width": 1}, {"birth_year": 1892, "from": "Wiener Werkst\u00e4tte", "periode": "1801_1921", "relationship": "employer", "to": "Eva Frieberger", "width": 1}, {"birth_year": 1891, "from": "Wiener Werkst\u00e4tte", "periode": "1801_1921", "relationship": "employer", "to": "Frieda Lagus", "width": 1}, {"birth_year": 1894, "from": "Wiener Werkst\u00e4tte", "periode": "1801_1921", "relationship": "employer", "to": "Fritzi Berger", "width": 1}, {"birth_year": 1895, "from": "Wiener Werkst\u00e4tte", "periode": "1801_1921", "relationship": "member_of", "to": "Heddi Hirsch", "width": 1}, {"birth_year": 1877, "from": "Wiener Werkst\u00e4tte", "periode": "1801_1921", "relationship": "member_of", "to": "Jutta Sika", "width": 1}, {"birth_year": 1891, "from": "Frieda Lagus", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Applied Arts Vienna", "width": 1}, {"birth_year": 1895, "from": "Q2568892", "periode": "1801_1921", "relationship": "educated_at", "to": "Heddi Hirsch", "width": 1}, {"birth_year": 1895, "from": "Heddi Hirsch", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Applied Arts Vienna", "width": 1}, {"birth_year": 1882, "from": "Eduard Josef Wimmer-Wisgrill", "periode": "1801_1921", "relationship": "employer", "to": "University of Applied Arts Vienna", "width": 1}, {"birth_year": 1902, "from": "Gertrud H\u00f6chsmann", "periode": "1801_1921", "relationship": "employer", "to": "University of Applied Arts Vienna", "width": 1}, {"birth_year": 1877, "from": "Jutta Sika", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Applied Arts Vienna", "width": 1}, {"birth_year": 1877, "from": "Jutta Sika", "periode": "1801_1921", "relationship": "member_of", "to": "\u00d6sterreichischer Werkbund", "width": 1}, {"birth_year": 1877, "from": "Jutta Sika", "periode": "1801_1921", "relationship": "member_of", "to": "Austrian Association of Women Artists", "width": 1}, {"birth_year": 1892, "from": "University of Applied Arts Vienna", "periode": "1801_1921", "relationship": "educated_at", "to": "Eva Frieberger", "width": 1}, {"birth_year": 1892, "from": "Eva Frieberger", "periode": "1801_1921", "relationship": "member_of", "to": "\u00d6sterreichischer Werkbund", "width": 1}, {"birth_year": 1893, "from": "Ballyhoo", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "Photoplay", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "Cosmopolitan", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "New York Journal-American", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "Woman\u0027s Home Companion", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "College Humor", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "La Patrie", "periode": "1801_1921", "relationship": "employer", "to": "Russell Patterson", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "employer", "to": "Montreal Standard", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "employer", "to": "The American Magazine", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "employer", "to": "Redbook", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "educated_at", "to": "McGill University", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "employer", "to": "Collier\u0027s", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "employer", "to": "Montreal Star", "width": 1}, {"birth_year": 1893, "from": "Russell Patterson", "periode": "1801_1921", "relationship": "member_of", "to": "National Cartoonists Society", "width": 1}, {"birth_year": 1875, "from": "M\u00fcnchner K\u00fcnstlerinnenverein", "periode": "1801_1921", "relationship": "educated_at", "to": "Marie von Geldern-Egmond", "width": 1}, {"birth_year": 1875, "from": "Kaufhaus Renner, Dresden", "periode": "1801_1921", "relationship": "employer", "to": "Marie von Geldern-Egmond", "width": 1}, {"birth_year": 1875, "from": "Kaufhaus Gerson", "periode": "1801_1921", "relationship": "employer", "to": "Marie von Geldern-Egmond", "width": 1}, {"birth_year": 1875, "from": "Marie von Geldern-Egmond", "periode": "1801_1921", "relationship": "employer", "to": "Paul W\u00fcrzler-Klopsch", "width": 1}, {"birth_year": 1875, "from": "Marie von Geldern-Egmond", "periode": "1801_1921", "relationship": "employer", "to": "Paul Schultze-Naumburg", "width": 1}, {"birth_year": 1875, "from": "Marie von Geldern-Egmond", "periode": "1801_1921", "relationship": "member_of", "to": "GEDOK", "width": 1}, {"birth_year": 1875, "from": "Marie von Geldern-Egmond", "periode": "1801_1921", "relationship": "member_of", "to": "Deutscher Werkbund", "width": 1}, {"birth_year": 1875, "from": "Marie von Geldern-Egmond", "periode": "1801_1921", "relationship": "employer", "to": "Deutsche Werkst\u00e4tten Hellerau", "width": 1}, {"birth_year": 1870, "from": "Anna Muthesius", "periode": "1801_1921", "relationship": "member_of", "to": "Deutscher Werkbund", "width": 1}, {"birth_year": 1909, "from": "Marie-Louise Carven", "periode": "1801_1921", "relationship": "educated_at", "to": "Beaux-Arts de Paris", "width": 1}, {"birth_year": 1889, "from": "Jean-Gabriel Domergue", "periode": "1801_1921", "relationship": "member_of", "to": "Acad\u00e9mie des beaux-arts", "width": 1}, {"birth_year": 1889, "from": "Jean-Gabriel Domergue", "periode": "1801_1921", "relationship": "educated_at", "to": "Beaux-Arts de Paris", "width": 1}, {"birth_year": 1916, "from": "Helena Rubinstein", "periode": "1801_1921", "relationship": "employer", "to": "Eric de Kolb", "width": 1}, {"birth_year": 1894, "from": "Shanghai Fine Arts School", "periode": "1801_1921", "relationship": "employer", "to": "Jiang Xiaojian", "width": 1}, {"birth_year": 1916, "from": "Beaux-Arts de Paris", "periode": "1801_1921", "relationship": "educated_at", "to": "Eric de Kolb", "width": 1}, {"birth_year": 1882, "from": "Beaux-Arts de Paris", "periode": "1801_1921", "relationship": "educated_at", "to": "George Barbier", "width": 1}, {"birth_year": 1894, "from": "Beaux-Arts de Paris", "periode": "1801_1921", "relationship": "educated_at", "to": "Jiang Xiaojian", "width": 1}, {"birth_year": 1882, "from": "George Barbier", "periode": "1801_1921", "relationship": "educated_at", "to": "Acad\u00e9mie Julian", "width": 1}, {"birth_year": 1897, "from": "Stanford University", "periode": "1801_1921", "relationship": "educated_at", "to": "Edith Head", "width": 1}, {"birth_year": 1897, "from": "Otis College of Art and Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Edith Head", "width": 1}, {"birth_year": 1897, "from": "Edith Head", "periode": "1801_1921", "relationship": "educated_at", "to": "University of California, Berkeley", "width": 1}, {"birth_year": 1897, "from": "Edith Head", "periode": "1801_1921", "relationship": "educated_at", "to": "Chouinard Art Institute", "width": 1}, {"birth_year": 1920, "from": "William Travilla", "periode": "1801_1921", "relationship": "educated_at", "to": "Woodbury University", "width": 1}, {"birth_year": 1920, "from": "William Travilla", "periode": "1801_1921", "relationship": "educated_at", "to": "Chouinard Art Institute", "width": 1}, {"birth_year": 1885, "from": "Hugo Boss", "periode": "1801_1921", "relationship": "member_of", "to": "Reichsluftschutzbund", "width": 1}, {"birth_year": 1885, "from": "Hugo Boss", "periode": "1801_1921", "relationship": "member_of", "to": "Kyffh\u00e4userbund", "width": 1}, {"birth_year": 1885, "from": "Hugo Boss", "periode": "1801_1921", "relationship": "member_of", "to": "Nationalsozialistischer Reichsbund f\u00fcr Leibes\u00fcbungen", "width": 1}, {"birth_year": 1885, "from": "Hugo Boss", "periode": "1801_1921", "relationship": "member_of", "to": "Nationalsozialistische Volkswohlfahrt", "width": 1}, {"birth_year": 1919, "from": "Vera N\u00e1dor", "periode": "1801_1921", "relationship": "employer", "to": "Moholy-Nagy University of Art and Design", "width": 1}, {"birth_year": 1919, "from": "Vera N\u00e1dor", "periode": "1801_1921", "relationship": "employer", "to": "This is fashion", "width": 1}, {"birth_year": 1895, "from": "Moholy-Nagy University of Art and Design", "periode": "1801_1921", "relationship": "educated_at", "to": "Kl\u00e1ra Zsindelyn\u00e9 T\u00fcd\u0151s", "width": 1}, {"birth_year": 1895, "from": "Kl\u00e1ra Zsindelyn\u00e9 T\u00fcd\u0151s", "periode": "1801_1921", "relationship": "educated_at", "to": "Debreceni Reform\u00e1tus Koll\u00e9gium D\u00f3czy Gimn\u00e1ziuma", "width": 1}, {"birth_year": 1890, "from": "Osceola Macarthy Adams", "periode": "1801_1921", "relationship": "educated_at", "to": "Fisk University", "width": 1}, {"birth_year": 1890, "from": "Osceola Macarthy Adams", "periode": "1801_1921", "relationship": "educated_at", "to": "Howard University", "width": 1}, {"birth_year": 1890, "from": "Osceola Macarthy Adams", "periode": "1801_1921", "relationship": "member_of", "to": "Delta Sigma Theta", "width": 1}, {"birth_year": 1890, "from": "Osceola Macarthy Adams", "periode": "1801_1921", "relationship": "employer", "to": "Bennett College", "width": 1}, {"birth_year": 1907, "from": "Stockholms-Tidningen", "periode": "1801_1921", "relationship": "employer", "to": "Aili Pekonen", "width": 1}, {"birth_year": 1907, "from": "Konstfack", "periode": "1801_1921", "relationship": "educated_at", "to": "Aili Pekonen", "width": 1}, {"birth_year": 1920, "from": "Konstfack", "periode": "1801_1921", "relationship": "educated_at", "to": "Katja of Sweden", "width": 1}, {"birth_year": 1892, "from": "Helsinki University of Technology", "periode": "1801_1921", "relationship": "educated_at", "to": "Aili-Salli Ahde-Kj\u00e4ldman", "width": 1}, {"birth_year": 1892, "from": "Architecta", "periode": "1801_1921", "relationship": "member_of", "to": "Aili-Salli Ahde-Kj\u00e4ldman", "width": 1}, {"birth_year": 1892, "from": "Aili-Salli Ahde-Kj\u00e4ldman", "periode": "1801_1921", "relationship": "member_of", "to": "Tuumastukki", "width": 1}, {"birth_year": 1908, "from": "Carolyn Schnurer", "periode": "1801_1921", "relationship": "educated_at", "to": "Traphagen School of Fashion", "width": 1}, {"birth_year": 1908, "from": "Carolyn Schnurer", "periode": "1801_1921", "relationship": "educated_at", "to": "New York University", "width": 1}, {"birth_year": 1908, "from": "Traphagen School of Fashion", "periode": "1801_1921", "relationship": "educated_at", "to": "Gladys Parker", "width": 1}, {"birth_year": 1914, "from": "Fashion Institute of Technology", "periode": "1801_1921", "relationship": "educated_at", "to": "David Rappaport", "width": 1}, {"birth_year": 1902, "from": "Fashion Institute of Technology", "periode": "1801_1921", "relationship": "employer", "to": "Helen Brockman", "width": 1}, {"birth_year": 1902, "from": "Kansas State University", "periode": "1801_1921", "relationship": "employer", "to": "Helen Brockman", "width": 1}, {"birth_year": 1883, "from": "State Academy of Fine Arts Stuttgart", "periode": "1801_1921", "relationship": "educated_at", "to": "Else Raydt", "width": 1}, {"birth_year": 1883, "from": "Else Raydt", "periode": "1801_1921", "relationship": "educated_at", "to": "Verein der Berliner K\u00fcnstlerinnen", "width": 1}, {"birth_year": 1883, "from": "Else Raydt", "periode": "1801_1921", "relationship": "employer", "to": "Kunstgewerbe- und Handwerkerschule Magdeburg", "width": 1}, {"birth_year": 1902, "from": "John P. John", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Paris", "width": 1}, {"birth_year": 1916, "from": "Irene Galitzine", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Paris", "width": 1}, {"birth_year": 1916, "from": "Irene Galitzine", "periode": "1801_1921", "relationship": "educated_at", "to": "University of Cambridge", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
